@@ -39,14 +39,14 @@ class ServoControlGUI:
         # Load configuration
         self.config = self.config_manager.load_config()
         
-        # Initialize GUI variables
-        self.setup_variables()
-        
-        # Create main window
+        # Create main window first
         self.root = tk.Tk()
         self.root.title("Hitec CAN Servo Programming Tool")
         self.root.geometry("900x700")
         self.root.minsize(800, 600)
+        
+        # Initialize GUI variables after root window exists
+        self.setup_variables()
         
         # Setup GUI
         self.setup_gui()
@@ -60,14 +60,14 @@ class ServoControlGUI:
         
     def setup_variables(self):
         """Initialize tkinter variables"""
-        self.channel_var = tk.StringVar()
-        self.bitrate_var = tk.StringVar(value="500000")
-        self.connection_status_var = tk.StringVar(value="Disconnected")
-        self.servo_id_var = tk.StringVar(value="1")
-        self.register_addr_var = tk.StringVar(value="0x00")
-        self.register_value_var = tk.StringVar(value="0x00")
-        self.can_id_var = tk.StringVar(value="0x123")
-        self.can_data_var = tk.StringVar(value="00 00 00 00 00 00 00 00")
+        self.channel_var = tk.StringVar(self.root)
+        self.bitrate_var = tk.StringVar(self.root, value="500000")
+        self.connection_status_var = tk.StringVar(self.root, value="Disconnected")
+        self.servo_id_var = tk.StringVar(self.root, value="1")
+        self.register_addr_var = tk.StringVar(self.root, value="0x00")
+        self.register_value_var = tk.StringVar(self.root, value="0x00")
+        self.can_id_var = tk.StringVar(self.root, value="0x123")
+        self.can_data_var = tk.StringVar(self.root, value="00 00 00 00 00 00 00 00")
         self.connected = False
         
     def setup_gui(self):
