@@ -135,7 +135,7 @@ class ServoControlGUI:
         servo_id_entry.grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         # Extended ID checkbox
-        self.extended_id_var = tk.BoolVar()
+        self.extended_id_var = tk.BooleanVar()
         ttk.Checkbutton(servo_frame, text="Extended CAN ID (29-bit)", 
                        variable=self.extended_id_var).grid(row=1, column=0, columnspan=2, sticky="w", pady=2)
         
@@ -236,7 +236,7 @@ class ServoControlGUI:
         self.custom_id_var = tk.StringVar(value="0x000")
         ttk.Entry(custom_frame, textvariable=self.custom_id_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
-        self.custom_extended_var = tk.BoolVar()
+        self.custom_extended_var = tk.BooleanVar()
         ttk.Checkbutton(custom_frame, text="Extended ID", 
                        variable=self.custom_extended_var).grid(row=0, column=2, padx=(10, 0), pady=2)
         
