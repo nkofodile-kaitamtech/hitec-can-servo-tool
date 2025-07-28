@@ -18,7 +18,7 @@ class ConfigManager:
         
         # Default configuration
         self.default_config = {
-            'can_channel': 'PCAN_USBBUS1',
+            'can_channel': '',  # Start with empty channel
             'can_bitrate': 500000,
             'servo_id': '0',
             'extended_id': False,

@@ -40,8 +40,11 @@ class ServoControlGUI:
         self.setup_gui()
         self.setup_message_callback()
         
-        # Apply saved configuration
+        # Apply saved configuration and refresh channels after GUI is ready
         self.apply_config()
+        
+        # Initial channel refresh after everything is set up
+        self.root.after(100, self.refresh_channels)
         
     def setup_gui(self):
         """Setup the main GUI layout"""
@@ -79,9 +82,13 @@ class ServoControlGUI:
         
         # Channel selection
         ttk.Label(settings_frame, text="PCAN Channel:").grid(row=0, column=0, sticky="w", pady=2)
-        self.channel_var = tk.StringVar(value=self.config.get('can_channel', 'PCAN_USBBUS1'))
-        self.channel_combo = ttk.Combobox(settings_frame, textvariable=self.channel_var, width=20)
+        self.channel_var = tk.StringVar(value=self.config.get('can_channel', ''))
+        self.channel_combo = ttk.Combobox(settings_frame, textvariable=self.channel_var, width=20, state="readonly")
         self.channel_combo.grid(row=0, column=1, sticky="ew", padx=(10, 0), pady=2)
+        
+        # Add placeholder text when no channel is selected
+        if not self.channel_var.get():
+            self.channel_combo.set("Select CAN Interface...")
         
         # Refresh channels button
         ttk.Button(settings_frame, text="Refresh", 
@@ -113,11 +120,25 @@ class ServoControlGUI:
         self.info_text = scrolledtext.ScrolledText(info_frame, height=8, width=60)
         self.info_text.pack(fill=tk.BOTH, expand=True)
         
+        # Add initial helpful information
+        initial_info = """Welcome to Hitec CAN Servo Programming Tool
+
+Getting Started:
+1. Click 'Refresh' to scan for available PCAN interfaces
+2. Select your CAN interface from the dropdown
+3. Choose appropriate bitrate (typically 500000 bps)
+4. Click 'Connect' to establish connection
+5. Use the 'Servo Control' tab to program your servos
+
+Requirements:
+• PCAN USB adapter connected
+• PCAN drivers installed
+• CAN bus with Hitec servos
+"""
+        self.info_text.insert(1.0, initial_info)
+        
         frame.rowconfigure(2, weight=1)
         frame.columnconfigure(1, weight=1)
-        
-        # Refresh channels on startup
-        self.refresh_channels()
         
     def create_servo_control_tab(self):
         """Create servo control and programming tab"""
@@ -322,14 +343,47 @@ class ServoControlGUI:
     def refresh_channels(self):
         """Refresh available PCAN channels"""
         try:
+            self.status_var.set("Scanning for CAN interfaces...")
             channels = self.can_interface.get_available_channels()
-            self.channel_combo['values'] = channels
-            if not self.channel_var.get() or self.channel_var.get() not in channels:
-                if channels:
-                    self.channel_var.set(channels[0])
+            
+            if channels:
+                self.channel_combo['values'] = channels
+                # If no channel selected or current selection not available, show prompt
+                if not self.channel_var.get() or self.channel_var.get() not in channels:
+                    if self.channel_var.get() == "Select CAN Interface...":
+                        # Keep placeholder text
+                        pass
+                    else:
+                        # Set to first available if we had a valid selection before
+                        self.channel_var.set(channels[0])
+                
+                self.status_var.set(f"Found {len(channels)} CAN interface(s)")
+                
+                # Show message box on first startup to guide user
+                if not hasattr(self, '_channels_scanned'):
+                    self._channels_scanned = True
+                    if len(channels) == 1:
+                        result = messagebox.askyesno("CAN Interface Found", 
+                                                   f"Found CAN interface: {channels[0]}\n\nWould you like to select it?")
+                        if result:
+                            self.channel_var.set(channels[0])
+                    else:
+                        messagebox.showinfo("CAN Interfaces Found", 
+                                          f"Found {len(channels)} CAN interfaces.\nPlease select one from the dropdown to continue.")
+            else:
+                self.channel_combo['values'] = []
+                self.channel_combo.set("No CAN interfaces found")
+                self.status_var.set("No CAN interfaces detected")
+                messagebox.showwarning("No CAN Interfaces", 
+                                     "No PCAN interfaces were detected.\n\nPlease ensure:\n" +
+                                     "• PCAN hardware is connected\n" +
+                                     "• PCAN drivers are installed\n" +
+                                     "• Interface is not in use by another application")
+                
         except Exception as e:
             self.logger.error(f"Error refreshing channels: {e}")
-            messagebox.showerror("Error", f"Failed to refresh channels:\n{e}")
+            self.status_var.set("Error scanning CAN interfaces")
+            messagebox.showerror("Error", f"Failed to scan CAN interfaces:\n{e}")
     
     def toggle_connection(self):
         """Toggle CAN connection"""
@@ -342,6 +396,14 @@ class ServoControlGUI:
         """Connect to CAN interface"""
         try:
             channel = self.channel_var.get()
+            
+            # Validate channel selection
+            if not channel or channel == "Select CAN Interface..." or channel == "No CAN interfaces found":
+                messagebox.showerror("No Interface Selected", 
+                                   "Please select a CAN interface from the dropdown first.\n\n" +
+                                   "Click 'Refresh' to scan for available interfaces.")
+                return
+            
             bitrate = int(self.bitrate_var.get())
             
             self.can_interface.channel = channel

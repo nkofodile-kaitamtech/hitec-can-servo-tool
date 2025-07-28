@@ -242,10 +242,13 @@ class CANInterface:
                 test_bus = can.Bus(interface='pcan', channel=channel, bitrate=500000)
                 test_bus.shutdown()
                 channels.append(channel)
-            except:
+                self.logger.debug(f"Found available PCAN channel: {channel}")
+            except Exception as e:
+                self.logger.debug(f"Channel {channel} not available: {e}")
                 continue
         
-        return channels if channels else ['PCAN_USBBUS1']  # Default fallback
+        self.logger.info(f"Detected {len(channels)} available PCAN channels")
+        return channels  # Return empty list if no channels found
     
     def get_status(self) -> Dict[str, Any]:
         """Get interface status information"""

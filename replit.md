@@ -8,6 +8,14 @@ This is a Python-based GUI application for programming and controlling Hitec CAN
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (July 28, 2025)
+
+- Modified CAN interface selection to start empty and prompt user to select from available interfaces
+- Added placeholder text "Select CAN Interface..." when no interface is chosen  
+- Improved channel detection with helpful user guidance and error messages
+- Added validation to prevent connection attempts without proper interface selection
+- Enhanced connection info display with step-by-step getting started guide
+
 ## System Architecture
 
 The application follows a modular architecture with clear separation of concerns:
