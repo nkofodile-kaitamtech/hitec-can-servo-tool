@@ -1,0 +1,24 @@
+; C:\Users\nkofo\Downloads\new servo hitec settings only.xmt
+;   CAN messages saved by PCAN-View v5.3.0.942
+;
+; Columns descriptions:
+; ~~~~~~~~~~~~~~~~~~~~~
+; +Message ID
+; |            +Cycle time in ms (0=manual)
+; |            |  +Data length
+; |            |  |  +Frame type
+; |            |  |  |  +Message data
+; |            |  |  |  |
+000h         100  3  D 72h 00h 32h  Paused ; read Servo ID
+00000000h    100  4  D 52h 00h 0Ch 10h  Paused ; servo request pos ext
+000h         100  3  D 72h 00h 6Ah  Paused ; Servo Read CAN Mode
+00000000h    100  3  D 72h 00h 32h  Paused ; read Servo ID ext
+00000000h    100  5  D 77h 00h 70h FFh FFh  Paused ; servo save and reset ext
+00000000h    100  5  D 77h 00h 3Eh 31h 00h  Paused ; write servo CAN ID Low
+000h         100  5  D 77h 00h 6Ah 01h 00h  Paused ; Servo Set CAN Mode
+00000000h    100  3  D 72h 00h 6Ah  Paused ; Servo Read CAN Mode ext
+000h         100  5  D 77h 00h 70h FFh FFh  Paused ; servo save and reset
+00000000h    100  4  D 52h 00h 3Ch 3Eh  Paused ; read servo CAN ID High and Low
+000h         100  5  D 77h 00h 32h 00h 00h  Paused ; servo 1 write recieve id 30
+000h         100  5  D 5Ah 05h 60h 01h C0h  Paused ; Baudrate servo
+000h         100  4  D 52h 00h 0Ch 10h  Paused ; servo request pos
