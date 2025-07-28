@@ -3,7 +3,7 @@ Main GUI application for Hitec CAN Servo Programming Tool
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, scrolledtext, BoolVar
+from tkinter import ttk, messagebox, filedialog, scrolledtext
 import threading
 import time
 import json
@@ -78,7 +78,7 @@ class ServoControlGUI:
         settings_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         
         # Channel selection
-        ttk.Label(settings_frame, text="PCAN Channel:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(settings_frame, text="PCAN Channel:").grid(row=0, column=0, sticky="w", pady=2)
         self.channel_var = tk.StringVar(value=self.config.get('can_channel', 'PCAN_USBBUS1'))
         self.channel_combo = ttk.Combobox(settings_frame, textvariable=self.channel_var, width=20)
         self.channel_combo.grid(row=0, column=1, sticky="ew", padx=(10, 0), pady=2)
@@ -88,7 +88,7 @@ class ServoControlGUI:
                   command=self.refresh_channels).grid(row=0, column=2, padx=(10, 0), pady=2)
         
         # Bitrate selection
-        ttk.Label(settings_frame, text="Bitrate (bps):").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(settings_frame, text="Bitrate (bps):").grid(row=1, column=0, sticky="w", pady=2)
         self.bitrate_var = tk.StringVar(value=str(self.config.get('can_bitrate', 500000)))
         bitrate_combo = ttk.Combobox(settings_frame, textvariable=self.bitrate_var, width=20)
         bitrate_combo['values'] = ('125000', '250000', '500000', '1000000')
@@ -129,32 +129,32 @@ class ServoControlGUI:
         servo_frame.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         
         # Servo ID
-        ttk.Label(servo_frame, text="Servo ID:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(servo_frame, text="Servo ID:").grid(row=0, column=0, sticky="w", pady=2)
         self.servo_id_var = tk.StringVar(value="0")
         servo_id_entry = ttk.Entry(servo_frame, textvariable=self.servo_id_var, width=10)
-        servo_id_entry.grid(row=0, column=1, sticky=tk.W, padx=(10, 0), pady=2)
+        servo_id_entry.grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         # Extended ID checkbox
         self.extended_id_var = tk.BoolVar()
         ttk.Checkbutton(servo_frame, text="Extended CAN ID (29-bit)", 
-                       variable=self.extended_id_var).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=2)
+                       variable=self.extended_id_var).grid(row=1, column=0, columnspan=2, sticky="w", pady=2)
         
         # CAN ID Programming Frame
         can_id_frame = ttk.LabelFrame(frame, text="CAN ID Programming", padding="10")
         can_id_frame.grid(row=1, column=0, sticky="ew", padx=(0, 10), pady=10)
         
-        ttk.Label(can_id_frame, text="New CAN ID:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(can_id_frame, text="New CAN ID:").grid(row=0, column=0, sticky="w", pady=2)
         self.new_can_id_var = tk.StringVar(value="49")
-        ttk.Entry(can_id_frame, textvariable=self.new_can_id_var, width=10).grid(row=0, column=1, sticky=tk.W, padx=(10, 0), pady=2)
+        ttk.Entry(can_id_frame, textvariable=self.new_can_id_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(can_id_frame, text="Set CAN ID", 
                   command=self.set_servo_can_id).grid(row=0, column=2, padx=(10, 0), pady=2)
         
-        ttk.Label(can_id_frame, text="CAN Mode:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(can_id_frame, text="CAN Mode:").grid(row=1, column=0, sticky="w", pady=2)
         self.can_mode_var = tk.StringVar(value="1")
         can_mode_combo = ttk.Combobox(can_id_frame, textvariable=self.can_mode_var, width=15)
         can_mode_combo['values'] = ('0 - Standard', '1 - Extended')
-        can_mode_combo.grid(row=1, column=1, sticky=tk.W, padx=(10, 0), pady=2)
+        can_mode_combo.grid(row=1, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(can_id_frame, text="Set CAN Mode", 
                   command=self.set_servo_can_mode).grid(row=1, column=2, padx=(10, 0), pady=2)
@@ -163,9 +163,9 @@ class ServoControlGUI:
         position_frame = ttk.LabelFrame(frame, text="Position Control", padding="10")
         position_frame.grid(row=2, column=0, sticky="ew", padx=(0, 10), pady=10)
         
-        ttk.Label(position_frame, text="Position:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(position_frame, text="Position:").grid(row=0, column=0, sticky="w", pady=2)
         self.position_var = tk.StringVar(value="1500")
-        ttk.Entry(position_frame, textvariable=self.position_var, width=10).grid(row=0, column=1, sticky=tk.W, padx=(10, 0), pady=2)
+        ttk.Entry(position_frame, textvariable=self.position_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(position_frame, text="Set Position", 
                   command=self.set_servo_position).grid(row=0, column=2, padx=(10, 0), pady=2)
@@ -175,9 +175,9 @@ class ServoControlGUI:
         read_frame.grid(row=0, column=1, rowspan=3, sticky="nsew", padx=10)
         
         # Register reading
-        ttk.Label(read_frame, text="Register Address:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(read_frame, text="Register Address:").grid(row=0, column=0, sticky="w", pady=2)
         self.read_address_var = tk.StringVar(value="0x32")
-        ttk.Entry(read_frame, textvariable=self.read_address_var, width=10).grid(row=0, column=1, sticky=tk.W, padx=(10, 0), pady=2)
+        ttk.Entry(read_frame, textvariable=self.read_address_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(read_frame, text="Read Register", 
                   command=self.read_servo_register).grid(row=0, column=2, padx=(10, 0), pady=2)
@@ -196,7 +196,7 @@ class ServoControlGUI:
                   command=self.save_and_reset_servo).grid(row=4, column=0, columnspan=3, sticky="ew", pady=10)
         
         # Results area
-        ttk.Label(read_frame, text="Results:").grid(row=5, column=0, sticky=tk.W, pady=(10, 2))
+        ttk.Label(read_frame, text="Results:").grid(row=5, column=0, sticky="w", pady=(10, 2))
         self.results_text = scrolledtext.ScrolledText(read_frame, height=15, width=40)
         self.results_text.grid(row=6, column=0, columnspan=3, sticky="nsew", pady=2)
         
@@ -232,15 +232,15 @@ class ServoControlGUI:
         custom_frame = ttk.LabelFrame(frame, text="Send Custom Message", padding="10")
         custom_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
         
-        ttk.Label(custom_frame, text="Message ID:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(custom_frame, text="Message ID:").grid(row=0, column=0, sticky="w", pady=2)
         self.custom_id_var = tk.StringVar(value="0x000")
-        ttk.Entry(custom_frame, textvariable=self.custom_id_var, width=10).grid(row=0, column=1, sticky=tk.W, padx=(10, 0), pady=2)
+        ttk.Entry(custom_frame, textvariable=self.custom_id_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         self.custom_extended_var = tk.BoolVar()
         ttk.Checkbutton(custom_frame, text="Extended ID", 
                        variable=self.custom_extended_var).grid(row=0, column=2, padx=(10, 0), pady=2)
         
-        ttk.Label(custom_frame, text="Data (hex):").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(custom_frame, text="Data (hex):").grid(row=1, column=0, sticky="w", pady=2)
         self.custom_data_var = tk.StringVar(value="72 00 32")
         ttk.Entry(custom_frame, textvariable=self.custom_data_var, width=30).grid(row=1, column=1, columnspan=2, sticky="ew", padx=(10, 0), pady=2)
         
