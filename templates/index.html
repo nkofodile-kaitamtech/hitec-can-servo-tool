@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitec CAN Servo Programming Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            text-align: center;
+            background: #e9ecef;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .tab.active {
+            background: #007bff;
+            color: white;
+        }
+        
+        .tab:hover:not(.active) {
+            background: #dee2e6;
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 500px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message-log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 10px;
+        }
+        
+        .message {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .message:nth-child(even) {
+            background: #ffffff;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .alert {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hitec CAN Servo Programming Tool</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('connection')">Connection</button>
+            <button class="tab" onclick="showTab('servo')">Servo Control</button>
+            <button class="tab" onclick="showTab('monitor')">Message Monitor</button>
+            <button class="tab" onclick="showTab('config')">Configuration</button>
+        </div>
+        
+        <!-- Connection Tab -->
+        <div id="connection" class="tab-content active">
+            <div class="status" id="connectionStatus">
+                {% if state.connected %}
+                <div class="connected">Connected to {{ state.channel }} @ {{ state.bitrate }} bps</div>
+                {% else %}
+                <div class="disconnected">Disconnected</div>
+                {% endif %}
+            </div>
+            
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label for="channel">CAN Interface:</label>
+                        <select id="channel">
+                            <option value="">Select CAN Interface...</option>
+                            {% for channel in state.available_channels %}
+                            <option value="{{ channel }}" {% if channel == state.channel %}selected{% endif %}>{{ channel }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bitrate">Bitrate (bps):</label>
+                        <select id="bitrate">
+                            <option value="125000">125000</option>
+                            <option value="250000">250000</option>
+                            <option value="500000" selected>500000</option>
+                            <option value="1000000">1000000</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="refreshChannels()">Refresh</button>
+                    <button id="connectButton" onclick="toggleConnection()">
+                        {% if state.connected %}Disconnect{% else %}Connect{% endif %}
+                    </button>
+                </div>
+                
+                <div class="info-box">
+                    <h3>Getting Started</h3>
+                    <ol>
+                        <li>Click 'Refresh' to scan for available PCAN interfaces</li>
+                        <li>Select your CAN interface from the dropdown</li>
+                        <li>Choose appropriate bitrate (typically 500000 bps)</li>
+                        <li>Click 'Connect' to establish connection</li>
+                        <li>Use the 'Servo Control' tab to program your servos</li>
+                    </ol>
+                    
+                    <h3 style="margin-top: 15px;">Requirements</h3>
+                    <ul>
+                        <li>PCAN USB adapter connected</li>
+                        <li>PCAN drivers installed</li>
+                        <li>CAN bus with Hitec servos</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Servo Control Tab -->
+        <div id="servo" class="tab-content">
+            <h2>Servo Programming</h2>
+            
+            <div class="grid">
+                <div>
+                    <div class="form-group">
+                        <label for="servoId">Servo ID:</label>
+                        <input type="number" id="servoId" value="1" min="1" max="255">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerAddress">Register Address (hex):</label>
+                        <input type="text" id="registerAddress" value="0x00" placeholder="0x00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="registerValue">Register Value (hex):</label>
+                        <input type="text" id="registerValue" value="0x00" placeholder="0x00">
+                    </div>
+                    
+                    <button onclick="readRegister()">Read Register</button>
+                    <button onclick="writeRegister()">Write Register</button>
+                </div>
+                
+                <div>
+                    <h3>Common Registers</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 8px; border: 1px solid #dee2e6;">Address</th>
+                            <th style="padding: 8px; border: 1px solid #dee2e6;">Description</th>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">0x06</td>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">CAN ID</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">0x07</td>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">Baud Rate</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">0x0A</td>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">Min Position</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">0x0B</td>
+                            <td style="padding: 8px; border: 1px solid #dee2e6;">Max Position</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Message Monitor Tab -->
+        <div id="monitor" class="tab-content">
+            <h2>CAN Message Monitor</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <button onclick="clearMessages()">Clear Messages</button>
+                <button onclick="toggleAutoRefresh()" id="autoRefreshButton">Auto Refresh: ON</button>
+            </div>
+            
+            <div class="message-log" id="messageLog">
+                <!-- Messages will be populated by JavaScript -->
+            </div>
+            
+            <h3 style="margin-top: 30px;">Send Custom Message</h3>
+            <div class="grid">
+                <div class="form-group">
+                    <label for="customCanId">CAN ID (hex):</label>
+                    <input type="text" id="customCanId" value="0x123" placeholder="0x123">
+                </div>
+                
+                <div class="form-group">
+                    <label for="customData">Data (hex bytes, space separated):</label>
+                    <input type="text" id="customData" value="00 00 00 00 00 00 00 00" placeholder="00 00 00 00 00 00 00 00">
+                </div>
+            </div>
+            <button onclick="sendCustomMessage()">Send Message</button>
+        </div>
+        
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content">
+            <h2>Configuration</h2>
+            <div class="info-box">
+                <h3>Application Settings</h3>
+                <p>Configuration settings are automatically saved and loaded.</p>
+                <p>Connection parameters and message filters are preserved between sessions.</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="configData">Configuration Data (JSON):</label>
+                <textarea id="configData" rows="10" readonly>{{ state | tojson(indent=2) }}</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; width: 300px; z-index: 1000;"></div>
+    
+    <script>
+        let autoRefresh = true;
+        let refreshInterval;
+        
+        function showTab(tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content and mark tab as active
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+        
+        async function refreshChannels() {
+            try {
+                const response = await fetch('/api/refresh_channels', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const channelSelect = document.getElementById('channel');
+                    channelSelect.innerHTML = '<option value="">Select CAN Interface...</option>';
+                    
+                    result.channels.forEach(channel => {
+                        const option = document.createElement('option');
+                        option.value = channel;
+                        option.textContent = channel;
+                        channelSelect.appendChild(option);
+                    });
+                    
+                    showAlert(result.message);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error refreshing channels: ' + error.message, 'error');
+            }
+        }
+        
+        async function toggleConnection() {
+            const connectButton = document.getElementById('connectButton');
+            const isConnected = connectButton.textContent === 'Disconnect';
+            
+            try {
+                if (isConnected) {
+                    const response = await fetch('/api/disconnect', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        connectButton.textContent = 'Connect';
+                        document.getElementById('connectionStatus').innerHTML = 
+                            '<div class="disconnected">Disconnected</div>';
+                        showAlert(result.message);
+                    } else {
+                        showAlert(result.message, 'error');
+                    }
+                } else {
+                    const channel = document.getElementById('channel').value;
+                    const bitrate = document.getElementById('bitrate').value;
+                    
+                    const response = await fetch('/api/connect', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({channel, bitrate})
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        connectButton.textContent = 'Disconnect';
+                        document.getElementById('connectionStatus').innerHTML = 
+                            `<div class="connected">Connected to ${channel} @ ${bitrate} bps</div>`;
+                        showAlert(result.message);
+                    } else {
+                        showAlert(result.message, 'error');
+                    }
+                }
+            } catch (error) {
+                showAlert('Connection error: ' + error.message, 'error');
+            }
+        }
+        
+        async function readRegister() {
+            const servoId = document.getElementById('servoId').value;
+            const registerAddress = document.getElementById('registerAddress').value;
+            
+            try {
+                const response = await fetch('/api/read_register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        servo_id: servoId,
+                        register_address: registerAddress
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Read error: ' + error.message, 'error');
+            }
+        }
+        
+        async function writeRegister() {
+            const servoId = document.getElementById('servoId').value;
+            const registerAddress = document.getElementById('registerAddress').value;
+            const registerValue = document.getElementById('registerValue').value;
+            
+            try {
+                const response = await fetch('/api/write_register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        servo_id: servoId,
+                        register_address: registerAddress,
+                        register_value: registerValue
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Write error: ' + error.message, 'error');
+            }
+        }
+        
+        async function sendCustomMessage() {
+            const canId = document.getElementById('customCanId').value;
+            const data = document.getElementById('customData').value;
+            
+            try {
+                const response = await fetch('/api/send_custom_message', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        can_id: canId,
+                        data: data
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert(result.message);
+                } else {
+                    showAlert(result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Send error: ' + error.message, 'error');
+            }
+        }
+        
+        async function loadMessages() {
+            try {
+                const response = await fetch('/api/get_messages');
+                const result = await response.json();
+                
+                const messageLog = document.getElementById('messageLog');
+                messageLog.innerHTML = '';
+                
+                result.messages.forEach(msg => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message';
+                    messageDiv.innerHTML = `
+                        <span style="color: #666;">${msg.timestamp}</span>
+                        <span style="color: #007bff; font-weight: bold;">ID: ${msg.id}</span>
+                        <span style="color: #28a745;">Data: ${msg.data}</span>
+                        <span style="color: #6c757d;">Len: ${msg.length}</span>
+                    `;
+                    messageLog.appendChild(messageDiv);
+                });
+                
+                // Auto-scroll to top for newest messages
+                messageLog.scrollTop = 0;
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+        
+        async function clearMessages() {
+            try {
+                const response = await fetch('/api/clear_messages', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    loadMessages();
+                    showAlert(result.message);
+                }
+            } catch (error) {
+                showAlert('Clear error: ' + error.message, 'error');
+            }
+        }
+        
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const button = document.getElementById('autoRefreshButton');
+            button.textContent = `Auto Refresh: ${autoRefresh ? 'ON' : 'OFF'}`;
+            
+            if (autoRefresh) {
+                startAutoRefresh();
+            } else {
+                stopAutoRefresh();
+            }
+        }
+        
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(loadMessages, 1000);
+        }
+        
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMessages();
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>

@@ -13,12 +13,17 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Servo Control GUI"
+args = "Web Servo Control"
 
 [[workflows.workflow]]
-name = "Servo Control GUI"
+name = "Web Servo Control"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m pip install python-can && python main.py"
+args = "python -m pip install python-can flask && python web_app.py"
+waitForPort = 5000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
