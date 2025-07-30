@@ -164,21 +164,35 @@ Requirements:
         can_id_frame = ttk.LabelFrame(frame, text="CAN ID Programming", padding="10")
         can_id_frame.grid(row=1, column=0, sticky="ew", padx=(0, 10), pady=10)
         
-        ttk.Label(can_id_frame, text="New CAN ID:").grid(row=0, column=0, sticky="w", pady=2)
-        self.new_can_id_var = tk.StringVar(value="49")
-        ttk.Entry(can_id_frame, textvariable=self.new_can_id_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
+        ttk.Label(can_id_frame, text="New CAN ID LOW:").grid(row=0, column=0, sticky="w", pady=2)
+        self.new_can_id_low_var = tk.StringVar(value="30")
+        ttk.Entry(can_id_frame, textvariable=self.new_can_id_low_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
-        ttk.Button(can_id_frame, text="Set CAN ID", 
-                  command=self.set_servo_can_id).grid(row=0, column=2, padx=(10, 0), pady=2)
+        ttk.Button(can_id_frame, text="Set CAN ID LOW", 
+                  command=self.set_servo_can_id_low).grid(row=0, column=2, padx=(10, 0), pady=2)
         
-        ttk.Label(can_id_frame, text="CAN Mode:").grid(row=1, column=0, sticky="w", pady=2)
+        ttk.Label(can_id_frame, text="New CAN ID HIGH:").grid(row=1, column=0, sticky="w", pady=2)
+        self.new_can_id_high_var = tk.StringVar(value="30")
+        ttk.Entry(can_id_frame, textvariable=self.new_can_id_high_var, width=10).grid(row=1, column=1, sticky="w", padx=(10, 0), pady=2)
+        
+        ttk.Button(can_id_frame, text="Set CAN ID HIGH", 
+                  command=self.set_servo_can_id_high).grid(row=1, column=2, padx=(10, 0), pady=2)
+        
+        ttk.Label(can_id_frame, text="CAN Mode:").grid(row=2, column=0, sticky="w", pady=2)
         self.can_mode_var = tk.StringVar(value="1")
         can_mode_combo = ttk.Combobox(can_id_frame, textvariable=self.can_mode_var, width=15)
         can_mode_combo['values'] = ('0 - Standard', '1 - Extended')
-        can_mode_combo.grid(row=1, column=1, sticky="w", padx=(10, 0), pady=2)
+        can_mode_combo.grid(row=2, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(can_id_frame, text="Set CAN Mode", 
-                  command=self.set_servo_can_mode).grid(row=1, column=2, padx=(10, 0), pady=2)
+                  command=self.set_servo_can_mode).grid(row=2, column=2, padx=(10, 0), pady=2)
+        
+        ttk.Label(can_id_frame, text="SERVO NODE ID:").grid(row=3, column=0, sticky="w", pady=2)
+        self.servoid_var = tk.StringVar(value="30")
+        ttk.Entry(can_id_frame, textvariable=self.servoid_var, width=10).grid(row=3, column=1, sticky="w", padx=(10, 0), pady=2)
+        
+        ttk.Button(can_id_frame, text="Set SERVO NODE ID", 
+                  command=self.set_servo_node_id).grid(row=3, column=2, padx=(10, 0), pady=2)
         
         # Position Control Frame
         position_frame = ttk.LabelFrame(frame, text="Position Control", padding="10")
@@ -463,11 +477,11 @@ Requirements:
         except Exception as e:
             self.logger.error(f"Error updating connection info: {e}")
     
-    def set_servo_can_id(self):
-        """Set servo CAN ID"""
+    def set_servo_can_id_low(self):
+        """Set servo CAN ID LOW"""
         try:
             servo_id = int(self.servo_id_var.get())
-            new_can_id = int(self.new_can_id_var.get())
+            new_can_id = int(self.new_can_id_low_var.get())
             is_extended = self.extended_id_var.get()
             
             if not self.can_interface.is_connected:
@@ -479,7 +493,7 @@ Requirements:
                 return
             
             # Create CAN ID programming messages
-            messages = self.servo_protocol.create_set_can_id_message(servo_id, new_can_id, is_extended)
+            messages = self.servo_protocol.create_set_can_id_low_message(servo_id, new_can_id, is_extended)
             
             # Send messages
             for arbitration_id, data in messages:
@@ -496,7 +510,76 @@ Requirements:
         except Exception as e:
             self.logger.error(f"Error setting CAN ID: {e}")
             messagebox.showerror("Error", f"Failed to set CAN ID:\n{e}")
-    
+
+
+    def set_servo_can_id_high(self):
+        """Set servo CAN ID HIGH"""
+        try:
+            servo_id = int(self.servo_id_var.get())
+            new_can_id = int(self.new_can_id_high_var.get())
+            is_extended = self.extended_id_var.get()
+            
+            if not self.can_interface.is_connected:
+                messagebox.showerror("Error", "CAN interface not connected")
+                return
+            
+            if not self.servo_protocol.validate_servo_id(servo_id):
+                messagebox.showerror("Error", "Invalid servo ID (0-255)")
+                return
+            
+            # Create CAN ID programming messages
+            messages = self.servo_protocol.create_set_can_id_high_message(servo_id, new_can_id, is_extended)
+            
+            # Send messages
+            for arbitration_id, data in messages:
+                if not self.can_interface.send_message(arbitration_id, data, is_extended):
+                    messagebox.showerror("Error", "Failed to send CAN ID programming message")
+                    return
+                time.sleep(0.1)  # Small delay between messages
+            
+            self.status_var.set(f"CAN ID set to {new_can_id} for servo {servo_id}")
+            self.add_result(f"Set CAN ID: Servo {servo_id} -> CAN ID {new_can_id}")
+            
+        except ValueError:
+            messagebox.showerror("Error", "Invalid numeric input")
+        except Exception as e:
+            self.logger.error(f"Error setting CAN ID: {e}")
+            messagebox.showerror("Error", f"Failed to set CAN ID:\n{e}")
+
+    def set_servo_node_id(self):
+        """Set servo NODE ID """
+        try:
+            servo_id = int(self.servo_id_var.get())
+            new_servo_id = int(self.servoid_var.get())
+            is_extended = self.extended_id_var.get()
+            
+            if not self.can_interface.is_connected:
+                messagebox.showerror("Error", "CAN interface not connected")
+                return
+            
+            if not self.servo_protocol.validate_servo_id(servo_id):
+                messagebox.showerror("Error", "Invalid servo ID (0-255)")
+                return
+            
+            # Create CAN ID programming messages
+            messages = self.servo_protocol.create_set_servo_id_message(servo_id, new_servo_id, is_extended)
+            
+            # Send messages
+            for arbitration_id, data in messages:
+                if not self.can_interface.send_message(arbitration_id, data, is_extended):
+                    messagebox.showerror("Error", "Failed to send CAN ID programming message")
+                    return
+                time.sleep(0.1)  # Small delay between messages
+            
+            self.status_var.set(f"SERVO ID set to {new_servo_id} for servo {servo_id}")
+            self.add_result(f"Set SERVO ID: Servo {servo_id} -> CAN ID {new_servo_id}")
+            
+        except ValueError:
+            messagebox.showerror("Error", "Invalid numeric input")
+        except Exception as e:
+            self.logger.error(f"Error setting CAN ID: {e}")
+            messagebox.showerror("Error", f"Failed to set CAN ID:\n{e}")
+
     def set_servo_can_mode(self):
         """Set servo CAN mode"""
         try:
@@ -710,10 +793,29 @@ Requirements:
             # If this is a response to our read request, show in results
             if parsed:
                 self.add_result(f"Received: {description}")
-                
+
+            if "Bus error" in str(message):
+                self.logger.warning("CAN Bus Warning Detected")
+                self.status_var.set("⚠️ CAN Bus Warning: Bus error threshold reached")
+                messagebox.showwarning("CAN Bus Warning", "The CAN bus is in a warning/heavy state.\nTrying to reset connection...")
+                self.reset_can_connection()
+                return
+    
         except Exception as e:
             self.logger.error(f"Error displaying message: {e}")
     
+    def reset_can_connection(self):
+        """Attempt to reset the CAN interface if it's in a heavy bus error state"""
+        try:
+            self.disconnect_can()
+            time.sleep(1)
+            self.connect_can()
+            self.status_var.set("CAN bus reconnected after warning")
+        except Exception as e:
+            self.logger.error(f"Failed to reset CAN connection: {e}")
+            messagebox.showerror("CAN Reset Failed", f"Could not recover CAN connection:\n{e}")
+
+
     def send_custom_message(self):
         """Send custom CAN message"""
         try:
@@ -833,7 +935,8 @@ Requirements:
             'can_bitrate': int(self.bitrate_var.get()),
             'servo_id': self.servo_id_var.get(),
             'extended_id': self.extended_id_var.get(),
-            'new_can_id': self.new_can_id_var.get(),
+            'new_can_id_low': self.new_can_id_low_var.get(),
+            'new_can_id_high': self.new_can_id_high_var.get(),
             'can_mode': self.can_mode_var.get(),
             'position': self.position_var.get(),
             'read_address': self.read_address_var.get(),
@@ -852,7 +955,8 @@ Requirements:
         self.bitrate_var.set(str(config.get('can_bitrate', 500000)))
         self.servo_id_var.set(str(config.get('servo_id', '0')))
         self.extended_id_var.set(config.get('extended_id', False))
-        self.new_can_id_var.set(str(config.get('new_can_id', '49')))
+        self.new_can_id_low_var.set(str(config.get('new_can_id_low', '30')))
+        self.new_can_id_high_var.set(str(config.get('new_can_id_high', '1478')))
         self.can_mode_var.set(config.get('can_mode', '1'))
         self.position_var.set(str(config.get('position', '1500')))
         self.read_address_var.set(config.get('read_address', '0x32'))

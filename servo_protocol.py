@@ -166,7 +166,7 @@ class ServoProtocol:
         # Save and reset command: write 0xFFFF to register 0x70
         return self.create_write_message(servo_id, 0x70, 0xFFFF, is_extended)
     
-    def create_set_can_id_message(self, servo_id: int, new_can_id: int, 
+    def create_set_can_id_low_message(self, servo_id: int, new_can_id: int, 
                                 is_extended: bool = False) -> List[Tuple[int, bytes]]:
         """
         Create messages to set servo CAN ID
@@ -182,12 +182,29 @@ class ServoProtocol:
         messages = []
         
         # Set CAN ID Low (address 0x3E)
-        can_id_low = new_can_id & 0xFF
+        can_id_low = new_can_id & 0xFFFF
         msg_low = self.create_write_message(servo_id, 0x3E, can_id_low, is_extended)
         messages.append(msg_low)
         
+        return messages
+    
+    def create_set_can_id_high_message(self, servo_id: int, new_can_id: int, 
+                                is_extended: bool = False) -> List[Tuple[int, bytes]]:
+        """
+        Create messages to set servo CAN ID
+        
+        Args:
+            servo_id: Current servo ID
+            new_can_id: New CAN ID to set
+            is_extended: Use extended CAN ID format
+            
+        Returns:
+            List of (arbitration_id, message_data) tuples
+        """
+        messages = []
+        
         # Set CAN ID High (address 0x3C) if needed
-        can_id_high = (new_can_id >> 8) & 0xFF
+        can_id_high = (new_can_id) & 0xFFFF
         if can_id_high > 0:
             msg_high = self.create_write_message(servo_id, 0x3C, can_id_high, is_extended)
             messages.append(msg_high)
@@ -208,6 +225,29 @@ class ServoProtocol:
             Tuple of (arbitration_id, message_data)
         """
         return self.create_write_message(servo_id, 0x6A, mode, is_extended)
+    
+    def create_set_servo_id_message(self, servo_id: int, new_servo_id: int, 
+                                is_extended: bool = False) -> List[Tuple[int, bytes]]:
+        """
+        Create messages to set servo NODE ID
+        
+        Args:
+            servo_id: Current servo ID
+            new_servo_id: New NODE ID to set
+            is_extended: Use extended CAN ID format
+            
+        Returns:
+            List of (arbitration_id, message_data) tuples
+        """
+        messages = []
+        
+        # Set CAN ID High (address 0x3C) if needed
+        servo_id_new = (new_servo_id) & 0xFFFF
+        if servo_id_new > 0:
+            msg_servo_id = self.create_write_message(servo_id, 0x32, servo_id_new, is_extended)
+            messages.append(msg_servo_id)
+        
+        return messages
     
     def create_position_command(self, servo_id: int, position: int, 
                               is_extended: bool = False) -> Tuple[int, bytes]:
