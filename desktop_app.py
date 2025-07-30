@@ -51,6 +51,7 @@ class ServoControlGUI:
         # Setup GUI
         self.setup_gui()
         self.setup_message_callback()
+        self.setup_error_callback()
         
         # Apply saved configuration
         self.apply_config()
@@ -112,14 +113,34 @@ class ServoControlGUI:
         bitrate_combo['values'] = ("125000", "250000", "500000", "1000000")
         bitrate_combo.grid(row=1, column=1, sticky="ew", padx=(0, 10), pady=(10, 0))
         
-        # Connection button
-        self.connect_button = ttk.Button(controls_frame, text="Connect", command=self.toggle_connection)
-        self.connect_button.grid(row=2, column=0, columnspan=2, pady=(20, 0), sticky="w")
+        # Connection buttons
+        button_frame = ttk.Frame(controls_frame)
+        button_frame.grid(row=2, column=0, columnspan=3, pady=(20, 0), sticky="ew")
+        
+        self.connect_button = ttk.Button(button_frame, text="Connect", command=self.toggle_connection)
+        self.connect_button.pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.reset_button = ttk.Button(button_frame, text="Reset Bus", command=self.manual_reset_bus, state=tk.DISABLED)
+        self.reset_button.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Auto-reset checkbox
+        self.auto_reset_var = tk.BooleanVar(self.root, value=True)
+        auto_reset_cb = ttk.Checkbutton(button_frame, text="Auto Reset", variable=self.auto_reset_var, command=self.toggle_auto_reset)
+        auto_reset_cb.pack(side=tk.LEFT, padx=(10, 0))
         
         # Status display
-        ttk.Label(controls_frame, text="Status:").grid(row=2, column=1, sticky="e", padx=(0, 10), pady=(20, 0))
-        status_label = ttk.Label(controls_frame, textvariable=self.connection_status_var, foreground="red")
-        status_label.grid(row=2, column=2, sticky="w", pady=(20, 0))
+        status_frame = ttk.Frame(controls_frame)
+        status_frame.grid(row=3, column=0, columnspan=3, pady=(10, 0), sticky="ew")
+        
+        ttk.Label(status_frame, text="Status:").pack(side=tk.LEFT)
+        status_label = ttk.Label(status_frame, textvariable=self.connection_status_var, foreground="red")
+        status_label.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Bus error status
+        self.bus_error_var = tk.StringVar(self.root, value="No errors")
+        ttk.Label(status_frame, text="Bus Errors:").pack(side=tk.LEFT, padx=(20, 5))
+        self.error_label = ttk.Label(status_frame, textvariable=self.bus_error_var, foreground="green")
+        self.error_label.pack(side=tk.LEFT)
         
         # Configure grid weights
         controls_frame.columnconfigure(1, weight=1)
@@ -326,6 +347,14 @@ Troubleshooting:
             ))
         
         self.can_interface.add_message_callback(message_callback)
+    
+    def setup_error_callback(self):
+        """Setup callback for CAN bus errors"""
+        def error_callback(error_message):
+            # Schedule GUI update in main thread
+            self.root.after(0, lambda: self.handle_bus_error(error_message))
+        
+        self.can_interface.add_error_callback(error_callback)
         
     def add_message_to_display(self, timestamp, msg_id, data, length):
         """Add message to display (called from main thread)"""
@@ -397,8 +426,11 @@ Troubleshooting:
             if self.can_interface.connect():
                 self.connected = True
                 self.connect_button.config(text="Disconnect")
+                self.reset_button.config(state=tk.NORMAL)
                 self.connection_status_var.set(f"Connected to {channel}")
                 self.status_label.config(text=f"Connected to {channel} @ {bitrate} bps")
+                self.bus_error_var.set("No errors")
+                self.error_label.config(foreground="green")
                 
                 # Update info text
                 self.info_text.config(state=tk.NORMAL)
@@ -431,8 +463,11 @@ Troubleshooting:
             self.can_interface.disconnect()
             self.connected = False
             self.connect_button.config(text="Connect")
+            self.reset_button.config(state=tk.DISABLED)
             self.connection_status_var.set("Disconnected")
             self.status_label.config(text="Disconnected")
+            self.bus_error_var.set("Disconnected")
+            self.error_label.config(foreground="gray")
             
             # Clear messages
             self.clear_messages()
@@ -540,6 +575,80 @@ Troubleshooting:
             self.status_label.config(text="Messages cleared")
         except Exception as e:
             self.logger.error(f"Error clearing messages: {e}")
+    
+    def handle_bus_error(self, error_message):
+        """Handle bus error notification from CAN interface"""
+        try:
+            self.bus_error_var.set(error_message)
+            
+            # Change error label color based on error type
+            if "auto-reset completed" in error_message.lower():
+                self.error_label.config(foreground="blue")
+            elif "error" in error_message.lower():
+                self.error_label.config(foreground="red")
+            else:
+                self.error_label.config(foreground="orange")
+            
+            # Show popup for serious errors
+            if "too many" in error_message.lower() or "heavy" in error_message.lower():
+                messagebox.showwarning("CAN Bus Warning", 
+                                     f"CAN Bus Error Detected:\n{error_message}\n\n" +
+                                     "The bus may be experiencing heavy traffic or errors.\n" +
+                                     "Auto-reset will attempt to recover the connection.")
+            
+            # Update status bar
+            self.status_label.config(text=error_message[:50] + "..." if len(error_message) > 50 else error_message)
+            
+        except Exception as e:
+            self.logger.error(f"Error handling bus error notification: {e}")
+    
+    def manual_reset_bus(self):
+        """Manually reset the CAN bus"""
+        try:
+            if not self.connected:
+                messagebox.showinfo("Not Connected", "CAN interface is not connected")
+                return
+            
+            result = messagebox.askyesno("Reset CAN Bus", 
+                                       "Are you sure you want to reset the CAN bus?\n\n" +
+                                       "This will disconnect and reconnect the interface,\n" +
+                                       "clearing all queued messages.")
+            
+            if result:
+                self.status_label.config(text="Resetting CAN bus...")
+                self.root.update()
+                
+                self.can_interface.manual_reset_bus()
+                self.clear_messages()
+                
+                # Update status
+                bus_status = self.can_interface.get_bus_status()
+                if bus_status['connected']:
+                    self.bus_error_var.set("Manual reset completed")
+                    self.error_label.config(foreground="blue")
+                    self.status_label.config(text="Bus reset successful")
+                else:
+                    self.bus_error_var.set("Reset failed - disconnected")
+                    self.error_label.config(foreground="red")
+                    self.status_label.config(text="Bus reset failed")
+                
+        except Exception as e:
+            self.logger.error(f"Error during manual bus reset: {e}")
+            messagebox.showerror("Reset Error", f"Failed to reset CAN bus:\n{e}")
+    
+    def toggle_auto_reset(self):
+        """Toggle automatic bus reset feature"""
+        try:
+            enabled = self.auto_reset_var.get()
+            self.can_interface.enable_auto_reset(enabled)
+            
+            if enabled:
+                self.status_label.config(text="Auto-reset enabled")
+            else:
+                self.status_label.config(text="Auto-reset disabled")
+                
+        except Exception as e:
+            self.logger.error(f"Error toggling auto-reset: {e}")
     
     def update_config_display(self):
         """Update configuration display"""
