@@ -42,6 +42,13 @@ class CANInterface:
         self.received_messages = Queue(maxsize=1000)
         self.lock = threading.Lock()
         
+        # Bus error handling
+        self.error_callbacks: List[Callable[[str], None]] = []
+        self.bus_error_count = 0
+        self.last_error_time = 0
+        self.max_errors_per_minute = 10
+        self.auto_reset_enabled = True
+        
     def connect(self) -> bool:
         """
         Connect to PCAN interface
@@ -122,25 +129,38 @@ class CANInterface:
                 if msg is None:
                     continue
                 
+                # Check for error frames
+                if hasattr(msg, 'is_error_frame') and msg.is_error_frame:
+                    self._handle_bus_error("Error frame detected")
+                    continue
+                
                 # Convert to our message format
                 can_msg = CANMessage(
                     arbitration_id=msg.arbitration_id,
                     data=msg.data,
                     is_extended_id=msg.is_extended_id,
                     timestamp=msg.timestamp,
-                    is_error_frame=msg.is_error_frame
+                    is_error_frame=getattr(msg, 'is_error_frame', False)
                 )
                 
-                # Add to queue
+                # Add to queue with overflow protection
                 try:
                     self.received_messages.put_nowait(can_msg)
                 except:
-                    # Queue full, remove oldest message
+                    # Queue full, remove oldest messages to prevent overflow
+                    messages_removed = 0
+                    while messages_removed < 100:  # Remove up to 100 old messages
+                        try:
+                            self.received_messages.get_nowait()
+                            messages_removed += 1
+                        except:
+                            break
+                    
+                    # Try to add current message
                     try:
-                        self.received_messages.get_nowait()
                         self.received_messages.put_nowait(can_msg)
                     except:
-                        pass
+                        pass  # Skip if still can't add
                 
                 # Notify callbacks
                 with self.lock:
@@ -152,7 +172,11 @@ class CANInterface:
                 
             except Exception as e:
                 if self.is_connected:
-                    self.logger.error(f"Error in receive worker: {e}")
+                    error_msg = str(e).lower()
+                    if any(keyword in error_msg for keyword in ['heavy', 'warning', 'bus error', 'error counter']):
+                        self._handle_bus_error(f"Bus error detected: {e}")
+                    else:
+                        self.logger.error(f"Error in receive worker: {e}")
                 time.sleep(0.01)
         
         self.logger.debug("Receive worker stopped")
@@ -249,6 +273,100 @@ class CANInterface:
         
         self.logger.info(f"Detected {len(channels)} available PCAN channels")
         return channels  # Return empty list if no channels found
+    
+    def add_error_callback(self, callback: Callable[[str], None]):
+        """Add a callback for bus errors"""
+        with self.lock:
+            if callback not in self.error_callbacks:
+                self.error_callbacks.append(callback)
+    
+    def remove_error_callback(self, callback: Callable[[str], None]):
+        """Remove an error callback"""
+        with self.lock:
+            if callback in self.error_callbacks:
+                self.error_callbacks.remove(callback)
+    
+    def _handle_bus_error(self, error_message: str):
+        """Handle bus errors with automatic recovery"""
+        current_time = time.time()
+        
+        # Count errors per minute
+        if current_time - self.last_error_time > 60:
+            self.bus_error_count = 0
+        
+        self.bus_error_count += 1
+        self.last_error_time = current_time
+        
+        self.logger.warning(f"CAN Bus Error #{self.bus_error_count}: {error_message}")
+        
+        # Notify error callbacks
+        with self.lock:
+            for callback in self.error_callbacks:
+                try:
+                    callback(f"Bus Error #{self.bus_error_count}: {error_message}")
+                except Exception as e:
+                    self.logger.error(f"Error in error callback: {e}")
+        
+        # Auto-reset if too many errors
+        if self.bus_error_count >= self.max_errors_per_minute and self.auto_reset_enabled:
+            self.logger.warning(f"Too many bus errors ({self.bus_error_count}), attempting auto-reset")
+            self._auto_reset_bus()
+    
+    def _auto_reset_bus(self):
+        """Automatically reset the CAN bus"""
+        try:
+            self.logger.info("Performing automatic CAN bus reset...")
+            
+            # Clear message queue to prevent overflow
+            self.clear_received_messages()
+            
+            # Disconnect and reconnect
+            old_channel = self.channel
+            old_bitrate = self.bitrate
+            
+            self.disconnect()
+            time.sleep(1)  # Wait before reconnecting
+            
+            self.channel = old_channel
+            self.bitrate = old_bitrate
+            
+            if self.connect():
+                self.bus_error_count = 0  # Reset error count on successful reconnection
+                self.logger.info("Auto-reset successful")
+                
+                # Notify callbacks of successful reset
+                with self.lock:
+                    for callback in self.error_callbacks:
+                        try:
+                            callback("Bus auto-reset completed successfully")
+                        except Exception as e:
+                            self.logger.error(f"Error in reset callback: {e}")
+            else:
+                self.logger.error("Auto-reset failed - could not reconnect")
+                
+        except Exception as e:
+            self.logger.error(f"Error during auto-reset: {e}")
+    
+    def manual_reset_bus(self):
+        """Manually reset the CAN bus"""
+        self.logger.info("Manual CAN bus reset requested")
+        self._auto_reset_bus()
+    
+    def get_bus_status(self) -> Dict[str, any]:
+        """Get current bus status information"""
+        return {
+            'connected': self.is_connected,
+            'channel': self.channel,
+            'bitrate': self.bitrate,
+            'error_count': self.bus_error_count,
+            'queue_size': self.received_messages.qsize(),
+            'auto_reset_enabled': self.auto_reset_enabled
+        }
+    
+    def enable_auto_reset(self, enabled: bool = True):
+        """Enable or disable automatic bus reset"""
+        self.auto_reset_enabled = enabled
+        self.logger.info(f"Auto-reset {'enabled' if enabled else 'disabled'}")
     
     def get_status(self) -> Dict[str, Any]:
         """Get interface status information"""

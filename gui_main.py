@@ -164,15 +164,15 @@ Requirements:
         can_id_frame = ttk.LabelFrame(frame, text="CAN ID Programming", padding="10")
         can_id_frame.grid(row=1, column=0, sticky="ew", padx=(0, 10), pady=10)
         
-        ttk.Label(can_id_frame, text="New CAN ID LOW:").grid(row=0, column=0, sticky="w", pady=2)
-        self.new_can_id_low_var = tk.StringVar(value="30")
+        ttk.Label(can_id_frame, text="New CAN ID LOW (dec):").grid(row=0, column=0, sticky="w", pady=2)
+        self.new_can_id_low_var = tk.StringVar(value="32816")
         ttk.Entry(can_id_frame, textvariable=self.new_can_id_low_var, width=10).grid(row=0, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(can_id_frame, text="Set CAN ID LOW", 
                   command=self.set_servo_can_id_low).grid(row=0, column=2, padx=(10, 0), pady=2)
         
-        ttk.Label(can_id_frame, text="New CAN ID HIGH:").grid(row=1, column=0, sticky="w", pady=2)
-        self.new_can_id_high_var = tk.StringVar(value="30")
+        ttk.Label(can_id_frame, text="New CAN ID HIGH (dec):").grid(row=1, column=0, sticky="w", pady=2)
+        self.new_can_id_high_var = tk.StringVar(value="5240")
         ttk.Entry(can_id_frame, textvariable=self.new_can_id_high_var, width=10).grid(row=1, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(can_id_frame, text="Set CAN ID HIGH", 
@@ -187,8 +187,8 @@ Requirements:
         ttk.Button(can_id_frame, text="Set CAN Mode", 
                   command=self.set_servo_can_mode).grid(row=2, column=2, padx=(10, 0), pady=2)
         
-        ttk.Label(can_id_frame, text="SERVO NODE ID:").grid(row=3, column=0, sticky="w", pady=2)
-        self.servoid_var = tk.StringVar(value="30")
+        ttk.Label(can_id_frame, text="SERVO NODE ID (dec):").grid(row=3, column=0, sticky="w", pady=2)
+        self.servoid_var = tk.StringVar(value="48")
         ttk.Entry(can_id_frame, textvariable=self.servoid_var, width=10).grid(row=3, column=1, sticky="w", padx=(10, 0), pady=2)
         
         ttk.Button(can_id_frame, text="Set SERVO NODE ID", 
@@ -223,20 +223,23 @@ Requirements:
         
         ttk.Button(read_frame, text="Read CAN Mode", 
                   command=lambda: self.read_servo_register(0x6A)).grid(row=2, column=0, columnspan=3, sticky="ew", pady=2)
-        
+
+        ttk.Button(read_frame, text="Read Servo Position", 
+                  command=lambda: self.read_servo_register(0x0C)).grid(row=3, column=0, columnspan=3, sticky="ew", pady=2)
+
         ttk.Button(read_frame, text="Read CAN ID", 
-                  command=self.read_can_id_registers).grid(row=3, column=0, columnspan=3, sticky="ew", pady=2)
+                  command=self.read_can_id_registers).grid(row=4, column=0, columnspan=3, sticky="ew", pady=2)
         
         ttk.Button(read_frame, text="Save & Reset", 
-                  command=self.save_and_reset_servo).grid(row=4, column=0, columnspan=3, sticky="ew", pady=10)
+                  command=self.save_and_reset_servo).grid(row=5, column=0, columnspan=3, sticky="ew", pady=10)
         
         # Results area
-        ttk.Label(read_frame, text="Results:").grid(row=5, column=0, sticky="w", pady=(10, 2))
+        ttk.Label(read_frame, text="Results:").grid(row=6, column=0, sticky="w", pady=(10, 2))
         self.results_text = scrolledtext.ScrolledText(read_frame, height=15, width=40)
-        self.results_text.grid(row=6, column=0, columnspan=3, sticky="nsew", pady=2)
+        self.results_text.grid(row=7, column=0, columnspan=3, sticky="nsew", pady=2)
         
         read_frame.columnconfigure(0, weight=1)
-        read_frame.rowconfigure(6, weight=1)
+        read_frame.rowconfigure(7, weight=1)
         frame.columnconfigure(1, weight=1)
         frame.rowconfigure(2, weight=1)
         

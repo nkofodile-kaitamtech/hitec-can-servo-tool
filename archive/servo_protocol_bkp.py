@@ -262,7 +262,7 @@ class ServoProtocol:
         Returns:
             Tuple of (arbitration_id, message_data)
         """
-        return self.create_write_message(servo_id, 0x1E, position, is_extended)
+        return self.create_write_message(servo_id, 0x0C, position, is_extended)
     
     def parse_response_message(self, data: bytes) -> Optional[Dict]:
         """
