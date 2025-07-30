@@ -3,12 +3,22 @@
   "can_bitrate": 1000000,
   "servo_id": "0",
   "extended_id": true,
-  "new_can_id_low": "30",
-  "new_can_id_high": "1478",
+  "new_can_id": "49",
   "can_mode": "1 - Extended",
-  "position": "1500",
+  "position": "9000",
   "read_address": "0x32",
   "custom_id": "0x000",
   "custom_data": "72 00 32",
-  "custom_extended": false
+  "custom_extended": true,
+  "window_geometry": "1200x800",
+  "last_log_directory": "",
+  "auto_connect": false,
+  "message_display_limit": 1000,
+  "log_level": "INFO",
+  "new_can_id_low": "32816",
+  "new_can_id_high": "5240",
+  "connection": {
+    "channel": "PCAN_USBBUS1",
+    "bitrate": 1000000
+  }
 }
